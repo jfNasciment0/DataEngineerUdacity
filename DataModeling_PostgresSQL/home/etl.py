@@ -6,9 +6,9 @@ from sql_queries import *
 
 
 def process_song_file(cur, filepath):
-   
+   """ Insert values from song files into artist and song tables. """
     if filepath:
-        song_data = []
+        # for each file in filepath we open and insert values in correct table
         for fl in filepath:
             # open song fil
             fl_df = pd.read_json(filepath , lines=True)
@@ -24,28 +24,27 @@ def process_song_file(cur, filepath):
                 title     = data[8]
                 year      = data[9]
 
-                #song_data.append([song_id,title, artist_id, year, duration])
-                #artist_data.append([artist_id, artist_name, artist_location, artist_lat, artist_lng])
                 # insert artist record
-                cur.execute(artist_table_insert, [artist_id, artist_name, artist_location, artist_lat, artist_lng])    
+                cur.execute(artist_table_insert, [artist_id, artist_name, artist_location, artist_lat, artist_lng])
                 # insert song record
                 cur.execute(song_table_insert, [song_id, title, artist_id, year, duration])
-            
-                
 
-    #conn.commit()
 
 def process_log_file(cur, filepath):
-    #print('lalallala')
+    """ Extract values from log files.
+
+        1) Insert values in dimentions table
+        2) Insert values in fact table
+    """
     if filepath:
         # Dict utilized just to convert colum_labels to a dictonary with time_data information
         idx_column_labels = {
-            0:'timestamp', 
+            0:'timestamp',
             1:'hour',
-            2:'day', 
-            3:'week_year', 
-            4:'month', 
-            5:'year', 
+            2:'day',
+            3:'week_year',
+            4:'month',
+            5:'year',
             6:'weekday'
         }
 
@@ -66,13 +65,12 @@ def process_log_file(cur, filepath):
 
     # Setup time_data to a list of list
     time_data = [
-         timestamp.tolist(), hour.tolist(), 
-         day.tolist(), week_of_year.tolist(), 
+         timestamp.tolist(), hour.tolist(),
+         day.tolist(), week_of_year.tolist(),
          month.tolist(), year.tolist(), week_day.tolist()
     ]
 
     column_labels = dict()
-
     # Combine time_data and column labels
     for i in range(0,len(time_data)):
         try:
@@ -93,7 +91,7 @@ def process_log_file(cur, filepath):
     for i, row in user_df.iterrows():
         cur.execute(user_table_insert, row)
 
-    #insert songplay record   
+    #insert songplay record
     for index, row in fl_df.loc[fl_df['page'] == 'NextSong'].iterrows():
         # get songid and artistid from song and artist tables
         cur.execute(song_select, (row.song, row.artist))
