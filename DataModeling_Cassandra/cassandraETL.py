@@ -68,7 +68,7 @@ def process_event(file, session):
         csvreader = csv.reader(f)
         next(csvreader) # skip header
         for line in csvreader:
-            ## TO-DO: Assign the INSERT statements into the `query` variable
+            ## Assign the INSERT statements into the `query` variable
             artist_name = line[0]
             firstname = line[1]
             iteminsession = int(line[3])
@@ -116,7 +116,9 @@ def select_values(session):
     """ Select values from our tables """
     ## Query 1:  Give me the artist, song title and song's length in the music app history that was heard during \
     ## sessionid = 338, and itemInSession = 4
-    query = "select * from music_library WHERE sessionid = 338 and itemInSession = 4 "
+
+    # I created music_library with a composite PRIMARY key with sessionId and ItemSession because the user wants to search using these columns.
+    query = "select artist_name, song_title, song_lenght  from music_library WHERE sessionid = 338 and itemInSession = 4 "
     try:
         rows = session.execute(query)
     except Exception as e:
@@ -127,7 +129,9 @@ def select_values(session):
 
     ## Query 2: Give me only the following: name of artist, song (sorted by itemInSession) and user (first and last name)\
     ## for userid = 10, sessionid = 182
-    query = "select * from artist_library WHERE userid = 10 and sessionid = 182 "
+
+    # I created artist_library with a composite key and add ItemSession as a clustered column to order the data, and I chose these values because the user wants to know about user 10 and session 182.
+    query = "select artist_name, song_title, firstname, lastname  from artist_library WHERE userid = 10 and sessionid = 182 "
     try:
         rows = session.execute(query)
     except Exception as e:
@@ -135,10 +139,12 @@ def select_values(session):
     print('Data from artist_library:')
     for row in rows:
         print(row)
-        print (row.artist_name, row.song_title, row.firstname, row.firstname)
+        print (row.artist_name, row.song_title, row.firstname, row.lastname)
 
     ## Query 3: Give me every user name (first and last) in my music app history who listened to the song 'All Hands Against His Own'
-    query = "select * from song_library WHERE song_title = 'All Hands Against His Own' "
+
+    # I created song_library with a composite key song_title and userId to create a unique key.
+    query = "select firstname, lastname from song_library WHERE song_title = 'All Hands Against His Own' "
     try:
         rows = session.execute(query)
     except Exception as e:
@@ -146,15 +152,23 @@ def select_values(session):
     print('Data from song_library:')
     for row in rows:
         #print(row)
-        print (row.firstname, row.firstname)
+        print (row.firstname, row.lastname)
 
 
 
 def create_tables(session):
     """ Create tables  music_library, artist_library and song_library tables. """
-    ## TO-DO: Query 3: Give me every user name (first and last) in my music app history who listened to the song 'All Hands Against His Own'
+
+    query = "CREATE TABLE IF NOT EXISTS music_library "
+    query = query + "(sessionid INT, iteminsession INT, song_title TEXT, artist_name TEXT, song_lenght FLOAT, PRIMARY KEY ((sessionid, iteminsession), song_title))"
+    try:
+        session.execute(query)
+        print('## TABLE music_library WAS CREATED!')
+    except Exception as e:
+        print(e)
+
     query = "CREATE TABLE IF NOT EXISTS song_library "
-    query = query + "(song_title TEXT, firstName TEXT, lastname TEXT, userid INT, PRIMARY KEY (song_title, userid))"
+    query = query + "(song_title TEXT, userid INT, firstName TEXT, lastname TEXT, PRIMARY KEY (song_title, userid))"
     try:
         session.execute(query)
         print('## TABLE song_library WAS CREATED!')
@@ -163,7 +177,7 @@ def create_tables(session):
 
 
     query = "CREATE TABLE IF NOT EXISTS artist_library "
-    query = query + "(artist_name TEXT, song_title TEXT, firstName TEXT, lastname TEXT, iteminsession INT, userid INT, sessionid INT, PRIMARY KEY ((userid, sessionid), iteminsession)) WITH CLUSTERING ORDER BY (iteminsession DESC);"
+    query = query + "(userid INT, sessionid INT, iteminsession INT, artist_name TEXT, song_title TEXT, firstName TEXT, lastname TEXT, PRIMARY KEY ((userid, sessionid), iteminsession)) WITH CLUSTERING ORDER BY (iteminsession DESC);"
     try:
         session.execute(query)
         print('## TABLE artist_library WAS CREATED!')
@@ -171,13 +185,7 @@ def create_tables(session):
         print(e)
 
 
-    query = "CREATE TABLE IF NOT EXISTS music_library "
-    query = query + "(artist_name TEXT, song_title TEXT, song_lenght FLOAT, sessionid INT, iteminsession INT, PRIMARY KEY ((sessionid, iteminsession), song_title))"
-    try:
-        session.execute(query)
-        print('## TABLE music_library WAS CREATED!')
-    except Exception as e:
-        print(e)
+
 
 def drop_tables(session):
     query = "drop table song_library"
@@ -203,7 +211,7 @@ def close_connection(session, cluster):
     cluster.shutdown()
 
 def create_keyspace(session):
-    # TO-DO: Create a Keyspace
+    # Create a Keyspace
     try:
         session.execute("""
         CREATE KEYSPACE IF NOT EXISTS udacity
