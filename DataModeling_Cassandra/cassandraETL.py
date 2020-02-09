@@ -8,6 +8,8 @@ import numpy as np
 import json
 import csv
 
+
+
 def process_log():
     """ Find and Process all log data to create only one file . """
     # checking your current working directory
@@ -58,59 +60,27 @@ def process_log():
             writer.writerow((row[0], row[2], row[3], row[4], row[5], row[6], row[7], row[8], row[12], row[13], row[16]))
 
 
-def process_event(file, session):
-
-    """ Insert values from event file into music_library, artist_library and song_library tables. """
-    # We have provided part of the code to set up the CSV file. Please complete the Apache Cassandra code below#
-    file = 'event_datafile_new.csv'
-
+def insert_data(query, session, values, dtypes, file):
+    """
+    Pipeline to insert data to a Apache Casssandra table from CSV file
+    Args:
+        query (str): INSERT statement query
+        session (object): Apache Casssandra session
+        values (list): list of indicies to pass to INSERT statement
+        dtypes (list): list of types to convert `values`
+        file (str): CSV file path
+    Returns:
+        None
+    """
+    assert(len(values) ==  len(dtypes))
     with open(file, encoding = 'utf8') as f:
         csvreader = csv.reader(f)
         next(csvreader) # skip header
         for line in csvreader:
-            ## Assign the INSERT statements into the `query` variable
-            artist_name = line[0]
-            firstname = line[1]
-            iteminsession = int(line[3])
-            lastname  = line[4]
-            song_lenght = float(line[5])
-            sessionid = int(line[8])
-            song_title = line[9]
-            userid = int(line[10])
+            # Here using list comprehension to convert values in an elegant way
+            session.execute(query, tuple([dtype(line[x]) for x, dtype in zip(values, dtypes)]))
 
-            ## INSERT  into the `music_library`
-            query_music_library = " INSERT INTO music_library (artist_name, song_title, song_lenght, sessionid, iteminsession)"
-            query_music_library = query_music_library + " VALUES (%s, %s, %s, %s, %s)"
-            ## Uncomment the code below If you would like to check to see what you will insert in the table
-            #print((line[0], line[9], float(line[5]), int(line[8]), int(line[3])))
-            try:
-                session.execute(query_music_library, (artist_name, song_title, song_lenght, sessionid, iteminsession))
-            except Exception as e:
-                print("Error INSERT INTO music_library")
-                print(e)
-                break;
 
-            ## INSERT  into the `artist_library`
-            query_artist_library = " INSERT INTO artist_library (artist_name, song_title, firstname, lastname, iteminsession, userid, sessionid)"
-            query_artist_library = query_artist_library + " VALUES (%s, %s, %s, %s, %s, %s, %s)"
-
-            try:
-                session.execute(query_artist_library, (artist_name, song_title, firstname, lastname, iteminsession, userid, sessionid))
-            except Exception as e:
-                print("Error INSERT INTO artist_library")
-                print(e)
-                break;
-
-            ## INSERT  into the `song_library`
-            query_song_library = " INSERT INTO song_library (song_title, firstname, lastname, userid)"
-            query_song_library = query_song_library + " VALUES (%s, %s, %s, %s)"
-
-            try:
-                session.execute(query_song_library, (song_title, firstname, lastname, userid))
-            except Exception as e:
-                print("Error INSERT INTO song_library")
-                print(e)
-                break;
 
 def select_values(session):
     """ Select values from our tables """
@@ -160,7 +130,7 @@ def create_tables(session):
     """ Create tables  music_library, artist_library and song_library tables. """
 
     query = "CREATE TABLE IF NOT EXISTS music_library "
-    query = query + "(sessionid INT, iteminsession INT, song_title TEXT, artist_name TEXT, song_lenght FLOAT, PRIMARY KEY ((sessionid, iteminsession), song_title))"
+    query = query + "(sessionid INT, iteminsession INT, song_title TEXT, artist_name TEXT, song_lenght FLOAT, PRIMARY KEY (sessionid, iteminsession))"
     try:
         session.execute(query)
         print('## TABLE music_library WAS CREATED!')
@@ -246,7 +216,26 @@ def main():
         # Create tables for our analysis
         create_tables(session)
         # Insert values into our tables that were created on the step above
-        process_event('event_datafile_new.csv', session)
+        #process_event('event_datafile_new.csv', session)
+        # filename
+        file = 'event_datafile_new.csv'
+        # query
+        queries = {'music_library' : " INSERT INTO music_library (sessionid, iteminsession, song_title, artist_name, song_lenght) VALUES (%s, %s, %s, %s, %s)",
+                   'artist_library' : " INSERT INTO artist_library (userid, sessionid, iteminsession, artist_name, song_title, firstName, lastname) VALUES (%s, %s, %s, %s, %s, %s, %s)",
+                   'song_library' :  " INSERT INTO song_library (song_title, userid, firstName, lastname) VALUES (%s, %s, %s, %s)"
+        }
+
+        # values and data types
+        #values = [8, 3, 0, 9, 5]
+        #dtypes = [int, int, str, str, float]
+        values = {'music_library' : ([8, 3, 9, 0, 5], [int, int, str, str, float]),
+                  'artist_library' : ([10, 8, 3, 0, 9, 1, 4],[int, int, int, str, str, str, str]),
+                  'song_library' : ([9, 10, 1, 4], [str, int, str, str])
+        }
+        for query  in queries:
+            # insert to table
+            insert_data(queries[query], session, values[query][0], values[query][1], file)
+        #insert_data()
         # Select values from our tables
         select_values(session)
     except Exception as e:
