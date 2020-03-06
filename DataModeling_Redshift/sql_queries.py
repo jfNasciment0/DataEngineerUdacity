@@ -19,13 +19,13 @@ SONG_DATA = config.get("S3", "SONG_DATA")
 
 # DROP TABLES
 
-staging_events_table_drop = ""
-staging_songs_table_drop = ""
-songplay_table_drop = ""
-user_table_drop = ""
-song_table_drop = ""
-artist_table_drop = ""
-time_table_drop = ""
+staging_events_table_drop = " DROP TABLE IF EXISTS staging_event;"
+staging_songs_table_drop = " DROP TABLE IF EXISTS staging_song;"
+songplay_table_drop = " DROP TABLE IF EXISTS songplays;"
+user_table_drop = " DROP TABLE IF EXISTS users;"
+song_table_drop = " DROP TABLE IF EXISTS songs;"
+artist_table_drop = " DROP TABLE IF EXISTS artists;"
+time_table_drop = " DROP TABLE IF EXISTS time;"
 
 # CREATE TABLES
 
@@ -127,33 +127,108 @@ time_table_create = ("""
 
 # STAGING TABLES
 
-staging_events_copy = ("""
-""").format()
-
-SQL_COPY = """
-copy staging_event from 's3://udacity-dend/song_data' 
+staging_songs_copy  = (""" copy staging_song from {}
 credentials 'aws_iam_role={}'
 gzip region 'us-west-2';
-        """.format(DWH_ROLE_ARN)
+        """).format(SONG_DATA, ARN)
 
-staging_songs_copy = ("""s3://udacity-dend/log_data
-""").format()
+staging_events_copy = (""" copy staging_event from {}
+credentials 'aws_iam_role={}'
+gzip region 'us-west-2';
+        """).format(LOG_DATA, ARN)
 
 # FINAL TABLES
 
 songplay_table_insert = ("""
+begin transaction;
+
+    insert into songplays
+    select start_time, user_id, level, song_id, staging_event.artist_id, session_id, location, user_agent
+    from staging_event 
+    inner join staging_song On staging_event.song = staging_song.title and
+                               staging_event.artist_id = staging_song.artist_id
+    ;
+
+end transaction;
 """)
 
 user_table_insert = ("""
+begin transaction;
+
+    delete from users 
+    using staging_event 
+    where   staging_event.first_name = users.first_name
+            staging_event.last_name = users.last_name
+            staging_event.gender = users.gender
+            staging_event.level = users.level
+    ; 
+
+    insert into users 
+    select user_id, first_name, last_name, gender, level from staging_event;
+
+end transaction;
+
 """)
 
 song_table_insert = ("""
+begin transaction;
+
+    delete from songs 
+    using staging_song 
+    where   staging_song.title = songs.title
+            staging_song.artist_id = songs.artist_id
+            staging_song.year = songs.year
+            staging_song.duration = songs.duration
+
+    insert into songs 
+    select song_id , title , artist_id , year , duration from staging_song;
+
+end transaction;
+
 """)
 
 artist_table_insert = ("""
+begin transaction;
+
+    delete from artists 
+    using staging_event 
+    where   staging_event.name = artists.name
+            staging_event.location = artists.location
+            staging_event.latitude = artists.latitude
+            staging_event.longitude = artists.longitude
+
+    insert into artists 
+    select artist_id, name, location, latitude, longitude from staging_event;
+
+end transaction;
+
 """)
 
 time_table_insert = ("""
+begin transaction;
+
+    delete from time 
+    using staging_event 
+    where    EXTRACT(HOUR FROM TIMESTAMP  to_timestamp(ts::text, 'YYYYMMDDHH24MISS')) = time.hour
+             EXTRACT(DAY FROM TIMESTAMP  to_timestamp(ts::text, 'YYYYMMDDHH24MISS')) = time.day
+             EXTRACT(WEEK FROM TIMESTAMP  to_timestamp(ts::text, 'YYYYMMDDHH24MISS')) = time.week
+             EXTRACT(MONTH FROM TIMESTAMP  to_timestamp(ts::text, 'YYYYMMDDHH24MISS')) = time.month
+             EXTRACT(YEAR FROM TIMESTAMP  to_timestamp(ts::text, 'YYYYMMDDHH24MISS')) = time.year
+             EXTRACT(DOW FROM TIMESTAMP  to_timestamp(ts::text, 'YYYYMMDDHH24MISS')) = time.weekday
+
+    insert into artists 
+    select 
+          to_timestamp(ts::text, 'YYYYMMDDHH24MISS') 
+        , EXTRACT(HOUR FROM TIMESTAMP  to_timestamp(ts::text, 'YYYYMMDDHH24MISS'))
+        , EXTRACT(DAY FROM TIMESTAMP  to_timestamp(ts::text, 'YYYYMMDDHH24MISS'))
+        , EXTRACT(WEEK FROM TIMESTAMP  to_timestamp(ts::text, 'YYYYMMDDHH24MISS'))
+        , EXTRACT(MONTH FROM TIMESTAMP  to_timestamp(ts::text, 'YYYYMMDDHH24MISS'))
+        , EXTRACT(YEAR FROM TIMESTAMP  to_timestamp(ts::text, 'YYYYMMDDHH24MISS'))
+        , EXTRACT(DOW FROM TIMESTAMP  to_timestamp(ts::text, 'YYYYMMDDHH24MISS'))
+    from staging_event;
+
+end transaction;
+                   
 """)
 
 # QUERY LISTS
