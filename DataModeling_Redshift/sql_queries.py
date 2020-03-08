@@ -74,7 +74,7 @@ staging_songs_table_create = ("""
 
 songplay_table_create = ("""
     CREATE TABLE IF NOT EXISTS dev.dw_music.songplays(
-                                        songplay_id  INTEGER IDENTITY(0,1),
+                                        songplay_id  INTEGER IDENTITY(0,1) PRIMARY KEY,
                                         start_time  TEXT NOT NULL,
                                         user_id     TEXT NOT NULL,
                                         level       TEXT NOT NULL,
@@ -88,7 +88,7 @@ songplay_table_create = ("""
 
 user_table_create = ("""
     CREATE TABLE IF NOT EXISTS dev.dw_music.users(
-                                        user_id TEXT NOT NULL,
+                                        user_id TEXT PRIMARY KEY,
                                         first_name TEXT NOT NULL,
                                         last_name TEXT NOT NULL,
                                         gender TEXT NOT NULL,
@@ -99,7 +99,7 @@ user_table_create = ("""
 
 song_table_create = ("""
     CREATE TABLE IF NOT EXISTS dev.dw_music.songs(
-                                        song_id TEXT NOT NULL,
+                                        song_id TEXT PRIMARY KEY,
                                         title TEXT NOT NULL,
                                         artist_id TEXT NOT NULL,
                                         year INT NOT NULL,
@@ -109,7 +109,7 @@ song_table_create = ("""
 
 artist_table_create = ("""
     CREATE TABLE IF NOT EXISTS dev.dw_music.artists(
-                                        artist_id TEXT NOT NULL,
+                                        artist_id TEXT PRIMARY KEY,
                                         name TEXT NOT NULL,
                                         location TEXT,
                                         latitude TEXT,
@@ -119,7 +119,7 @@ artist_table_create = ("""
 
 time_table_create = ("""
     CREATE TABLE IF NOT EXISTS dev.dw_music.time(
-                                        start_time timestamptz NOT NULL,
+                                        start_time timestamptz PRIMARY KEY,
                                         hour int NOT NULL,
                                         day int NOT NULL,
                                         week TEXT NOT NULL,
@@ -136,10 +136,13 @@ credentials 'aws_iam_role={}'
 format as json 'auto' region 'us-west-2';
         """).format(SONG_DATA, ARN)
 
-staging_events_copy = (""" copy staging_event from {}
+
+staging_events_copy = ("""
+copy staging_events from '{}'
 credentials 'aws_iam_role={}'
-format as json 'auto' region 'us-west-2';
-        """).format(LOG_DATA, ARN)
+json '{}' compupdate on region 'us-west-2';
+""").format(LOG_DATA, ARN, LOG_JSONPATH)
+
 
 # FINAL TABLES
 

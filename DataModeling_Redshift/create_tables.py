@@ -5,18 +5,24 @@ from sql_queries import create_schema_queries, create_table_queries, drop_table_
 
 
 def create_schema(cur, conn):
+    """ Create schema if not exists from create_schema_queries
+    """
     for query in create_schema_queries:
         cur.execute(query)
         conn.commit()
 
 
 def drop_tables(cur, conn):
+    """ Drop tables to not duplicate values
+    """
     for query in drop_table_queries:
         cur.execute(query)
         conn.commit()
 
 
 def create_tables(cur, conn):
+    """ Create table from create_tables_queries
+    """
     for query in create_table_queries:
         cur.execute(query)
         conn.commit()
