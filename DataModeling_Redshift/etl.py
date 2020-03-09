@@ -4,14 +4,14 @@ from sql_queries import copy_table_queries, insert_table_queries
 
 
 def load_staging_tables(cur, conn):
-    """ Load staging tables """
+    """ Load staging tables from copy_table_queries """
     for query in copy_table_queries:
         cur.execute(query)
         conn.commit()
 
 
 def insert_tables(cur, conn):
-    """ Load dim and fact table, from staging table."""
+    """ Load dim and fact table from staging table."""
     for query in insert_table_queries:
         cur.execute(query)
         conn.commit()

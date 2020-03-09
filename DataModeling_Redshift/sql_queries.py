@@ -220,12 +220,7 @@ begin transaction;
 
     delete from dev.dw_music.time 
     using dev.st_music.staging_event 
-    where    EXTRACT(HOUR FROM to_timestamp(ts::text, 'YYYYMMDDHH24MISS')) = time.hour
-             and EXTRACT(DAY FROM to_timestamp(ts::text, 'YYYYMMDDHH24MISS')) = time.day
-             and EXTRACT(WEEK FROM to_timestamp(ts::text, 'YYYYMMDDHH24MISS')) = time.week
-             and EXTRACT(MONTH FROM to_timestamp(ts::text, 'YYYYMMDDHH24MISS')) = time.month
-             and EXTRACT(YEAR FROM to_timestamp(ts::text, 'YYYYMMDDHH24MISS')) = time.year
-             and EXTRACT(DOW FROM to_timestamp(ts::text, 'YYYYMMDDHH24MISS')) = time.weekday
+    where        to_timestamp(ts::text, 'YYYYMMDDHH24MISS') = time.start_time
     ;
 
     insert into dev.dw_music.time 
