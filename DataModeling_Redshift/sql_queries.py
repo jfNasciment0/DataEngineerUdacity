@@ -141,11 +141,6 @@ time_table_create = ("""
 
 # STAGING TABLES
 
-#staging_songs_copy  = (""" copy staging_song from {}
-#credentials 'aws_iam_role={}'
-#format as json 'auto' region 'us-west-2';
-#        """).format(SONG_DATA, ARN)
-
 staging_songs_copy  = (""" 
 COPY sparkify.st_music.staging_song from  '{}'
 CREDENTIALS 'aws_iam_role={}'
