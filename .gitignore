@@ -20,4 +20,4 @@ lib/*.lib
 *.suo
 
 #Config files
-#*.cfg
+*.cfg
