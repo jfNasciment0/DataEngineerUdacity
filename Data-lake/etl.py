@@ -84,15 +84,12 @@ def readJsonFiles(spark, input_data, data_schema):
     """
     # read data file
     print("...Reading data from S3")
-    print(input_data)
-    #print(data_schema)
+
     try:
         data_df = spark.read.json(input_data, schema = data_schema)
         data_df.limit(2)
         return data_df
     except:
-        #data_df = spark.read.json(input_data, schema = data_schema)
-        #return data_df
         return "Error load data"
 
 
@@ -111,7 +108,7 @@ def process_song_data(spark, df_data, output_data):
 
     # write songs table to parquet files partitioned by year and artist
     song_out_path = str(output_data + 'songs/songs.parquet')
-    songs_table.write.parquet(song_out_path, mode = ' overwrite', partitionBy = ['year', 'artist_id'])
+    songs_table.write.parquet(song_out_path, mode='overwrite', partitionBy=['year', 'artist_id'])
 
     # extract columns to create artists table
     artist_mapping = dict(zip(["artist_id", "artist_id"], 
@@ -128,7 +125,7 @@ def process_song_data(spark, df_data, output_data):
 
 
 def process_log_data(spark, df_event, df_song, output_data):
-     """
+    """
         This Function create dimentions and facts table from event and song data.
         Param:
             spark: spark session
@@ -162,7 +159,7 @@ def process_log_data(spark, df_event, df_song, output_data):
     
     # write time table to parquet files partitioned by year and month
     time_out_path = str(output_data + 'time/time.parquet')
-    time_table.write.parquet(time_out_path, mode = 'overwrite', partitionBy = ['year', 'month']) 
+    time_table.write.parquet(time_out_path, mode='overwrite', partitionBy=['year', 'month']) 
     
     # read in song data to use for songplays table
 
