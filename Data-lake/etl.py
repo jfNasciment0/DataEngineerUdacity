@@ -3,20 +3,20 @@ from datetime import datetime
 import os
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import udf, col, monotonically_increasing_id
-from pyspark.sql.functions import year, month, dayofmonth, hour, weekofyear, date_format, TimestampType
-from pyspark.sql.types import StructType as R, StructField as Fld, DoubleType as Dbl, StringType as Str, IntegerType as Int, DateType as Date
+from pyspark.sql.functions import year, month, dayofmonth, hour, weekofyear, date_format
+from pyspark.sql.types import StructType as R, StructField as Fld, DoubleType as Dbl, StringType as Str, IntegerType as Int, DateType as Date, TimestampType as Timestamp
 
 def set_aws_access(file):
     """
         This function define the AWS access enviroment
-        Param:
+        Param: 
             File
     """
     try:
         config = configparser.ConfigParser()
         config.read(file)
-        os.environ['AWS_ACCESS_KEY_ID'] = config['AWS_ACCESS_KEY_ID']
-        os.environ['AWS_SECRET_ACCESS_KEY'] = config['AWS_SECRET_ACCESS_KEY']
+        os.environ['AWS_ACCESS_KEY_ID'] = config['AWS']['AWS_ACCESS_KEY_ID']
+        os.environ['AWS_SECRET_ACCESS_KEY'] = config['AWS']['AWS_SECRET_ACCESS_KEY']
     except:
         print('Error set AWS environment !!')
 
@@ -38,6 +38,7 @@ def set_data_schema(schema):
         Output:
             schema
     """
+    print("...Setting data schema")
     try:
         songtSchema = R([    
             Fld("artist_id", Str()), 
@@ -78,11 +79,20 @@ def set_data_schema(schema):
     
 
 def readJsonFiles(spark, input_data, data_schema):
+    """
+    
+    """
     # read data file
+    print("...Reading data from S3")
+    print(input_data)
+    #print(data_schema)
     try:
         data_df = spark.read.json(input_data, schema = data_schema)
+        data_df.limit(2)
         return data_df
     except:
+        #data_df = spark.read.json(input_data, schema = data_schema)
+        #return data_df
         return "Error load data"
 
 
@@ -118,7 +128,14 @@ def process_song_data(spark, df_data, output_data):
 
 
 def process_log_data(spark, df_event, df_song, output_data):
-    
+     """
+        This Function create dimentions and facts table from event and song data.
+        Param:
+            spark: spark session
+            df_event: Dataframe from json event
+            df_song: Dataframe from json song
+            output_data: path to save the table on s3
+    """
     # filter by actions for song plays
     df = df_event.filter(df_event.page == 'NextSong')
 
@@ -130,7 +147,7 @@ def process_log_data(spark, df_event, df_song, output_data):
     users_table.write.parquet(user_out_path, mode = 'overwrite') 
 
     # create timestamp column from original timestamp column
-    get_timestamp = udf(lambda x: datetime.fromtimestamp(x/1000), TimestampType())
+    get_timestamp = udf(lambda x: datetime.fromtimestamp(x/1000), Timestamp())
     df = df.withColumn('timestamp', get_timestamp(df.ts))
 
     # extract columns to create time table
@@ -176,20 +193,22 @@ def main():
     
     spark = create_spark_session()
     input_data = "s3a://udacity-dend/"
-    song_data = "song_data/A/B/C/TRABCEI128F424C983.json"
+    #song_data = "song_data/A/B/C/TRABCEI128F424C983.json"
+    song_data = "song_data/*/*/*/*.json"
     # get filepath to log data file
-    event_data = "log_data/2018/11/2018-11-13-events.json"
-    output_data = "My S3 BUcket"
+    #event_data = "log_data/2018/11/2018-11-13-events.json"
+    event_data = "log_data/*/*/*.json"
+    output_data = "s3a://data-engineer-data-lake/analytics/"
     
     song_schema = set_data_schema("Song")
     event_schema = set_data_schema("Event")
 
     df_song = readJsonFiles(spark, input_data + song_data, song_schema)
     df_event = readJsonFiles(spark, input_data + event_data, event_schema)
-
+    #print(song_schema)
     process_song_data(spark, df_song, output_data)    
     process_log_data(spark, df_event, df_song, output_data)
 
 
 if __name__ == "__main__":
-    main()
+    main() 
